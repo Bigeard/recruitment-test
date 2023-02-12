@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 
 
 const EmployeeTable = () => {
+    const [init, setInit] = useState(false);
+
     const [employeeList, setEmployeeList] = useState([]);
     const [name, setName] = useState("");
     const [value, setValue] = useState(0);
@@ -11,14 +13,15 @@ const EmployeeTable = () => {
     const [valueEdit, setValueEdit] = useState(0);
 
     const [status, setStatus] = useState(null);
+    const [abcSum, setAbcSum] = useState(0);
+
 
     // GET ALL EMPLOYEE
     useEffect(() => {
-        fetch('http://localhost:5000/Employees')
-            .then((response) => response.json())
-            .then((data) => {
-                setEmployeeList(data);
-            })
+        if (!init) {
+            setInit(true);
+            getAllEmployees();
+        }
     });
 
     const displayStatus = () => {
@@ -31,9 +34,21 @@ const EmployeeTable = () => {
         }
     }
 
+    // GET ALL EMPLOYEE
+    const getAllEmployees = () => {
+        fetch('http://localhost:5000/Employees')
+            .then((response) => response.json())
+            .then((data) => {
+                setEmployeeList(data);
+            })
+            .then(() => getAbcSum())
+            .catch((error) => setStatus(error.message));
+    }
+
     // ADD EMPLOYEE
     const handleSubmit = (event) => {
         event.preventDefault();
+        setStatus(null);
         fetch('http://localhost:5000/Employees', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -43,30 +58,38 @@ const EmployeeTable = () => {
             }),
         }).then((response) => response.json())
             .then((data) => {
-                if (data.status === 400) {
-                    setStatus(`${data.title} - Status ${data.status}`);
+                if (data.statusInfo) {
+                    setStatus(data.statusInfo);
+                }
+                else if (data.status === 500) {
+                    setStatus(`${data.title} - Status ${data.status} - POST /Employees`);
                 }
                 else {
                     setEmployeeList([...employeeList, { name, value }]);
                 }
             })
-            .catch((error) => setStatus(error.message))
+            .then(() => getAbcSum())
+            .catch((error) => setStatus(error.message));
         setName("");
         setValue(0);
     };
 
     // UPDATE EMPLOYEE
-    const handleEdit = (index, employee) => {
+    const handleEdit = (event, index, employee) => {
+        event.preventDefault();
         setNameEdit(employee.name);
         setValueEdit(employee.value);
         setOnEditIndex(index);
     };
 
-    const handleCancelEdit = () => {
+    const handleCancelEdit = (event) => {
+        event.preventDefault();
         setOnEditIndex(null);
     };
 
-    const handleSubmitEdit = (index, employeeName) => {
+    const handleSubmitEdit = (event, index, employeeName) => {
+        setStatus(null);
+        event.preventDefault();
         fetch('http://localhost:5000/Employees?' + new URLSearchParams({ name: employeeName }), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -76,14 +99,20 @@ const EmployeeTable = () => {
             }),
         }).then((response) => response.json())
             .then((data) => {
-                if (data.status === 400) {
-                    setStatus(`${data.title} - Status ${data.status}`);
+                if (data.statusInfo) {
+                    setStatus(data.statusInfo);
+                }
+                else if (data.status === 500) {
+                    setStatus(`${data.title} - Status ${data.status} - PUT /Employees?${new URLSearchParams({ name: employeeName })}`);
                 }
                 else {
-                    employeeList[index] = { name, value };
+                    const newEmployeeList = [...employeeList];
+                    newEmployeeList[index] = { name: nameEdit, value: valueEdit };
+                    setEmployeeList(newEmployeeList);
                 }
             })
-            .catch((error) => setStatus(error.message))
+            .then(() => getAbcSum())
+            .catch((error) => setStatus(error.message));
         setOnEditIndex(null);
     };
 
@@ -94,57 +123,91 @@ const EmployeeTable = () => {
                     <input
                         type="text"
                         value={nameEdit}
-                        onChange={(event) => setNameEdit(event.target.value)}
+                        onChange={(e) => setNameEdit(e.target.value)}
                     />
                 </td>
                 <td>
                     <input
                         type="number"
                         value={valueEdit}
-                        onChange={(event) => setValueEdit(event.target.value)}
+                        onChange={(e) => setValueEdit(e.target.value)}
                     />
                 </td>
                 <td>
-                    <button onClick={() => handleCancelEdit()}>Cancel</button>
-                    <button onClick={() => handleSubmitEdit(index, employeeName)}>Submit</button>
+                    <button onClick={(e) => handleCancelEdit(e)}>Cancel</button>
+                    <button onClick={(e) => handleSubmitEdit(e, index, employeeName)}>Submit</button>
                 </td>
             </tr>
         )
     }
 
     // DELETE EMPLOYEE
-    const handleRemove = (index, employeeName) => {
+    const handleDelete = (event, index, employeeName) => {
+        event.preventDefault();
         fetch('http://localhost:5000/Employees?' + new URLSearchParams({ name: employeeName }), {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' }
         })
             .then((response) => response.json())
             .then((data) => {
-                if (data.status === 400) {
-                    setStatus(`${data.title} - Status ${data.status}`);
+                if (data.status === 500) {
+                    setStatus(`${data.title} - Status ${data.status} - DELETE /Employees?${new URLSearchParams({ name: employeeName })}`);
                 }
                 else {
                     setEmployeeList(employeeList.filter((_, i) => i !== index));
                 }
             })
-            .catch((error) => setStatus(error.message))
+            .then(() => getAbcSum())
+            .catch((error) => setStatus(error.message));
     };
+
+    const handleIncrement = (event) => {
+        event.preventDefault();
+        fetch('http://localhost:5000/List/increment', { method: 'PUT' })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.status === 500) {
+                    setStatus(`${data.title} - Status ${data.status} - PUT /List/increment`);
+                }
+            })
+            .then(() => getAllEmployees())
+            .catch((error) => setStatus(error.message))
+    }
+
+    const getAbcSum = () => {
+        fetch('http://localhost:5000/List/getAbcSum')
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.status === 500) {
+                    setStatus(`${data.title} - Status ${data.status} - GET /List/abcSum`);
+                }
+                else {
+                    setAbcSum(data.number);
+                }
+            })
+            .catch((error) => setStatus(error.message))
+    }
 
     return (
         <div>
             {displayStatus()}
+
+            <div>
+                <button onClick={handleIncrement}>Increment</button>
+                <span>ABC Sum: {abcSum}</span>
+            </div>
 
             {/* Add employee form */}
             <form onSubmit={handleSubmit}>
                 <input
                     type="text"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(e) => setName(e.target.value)}
                 />
                 <input
                     type="number"
                     value={value}
-                    onChange={(event) => setValue(event.target.value)}
+                    onChange={(e) => setValue(e.target.value)}
                 />
                 <button type="submit">Add Employee</button>
             </form>
@@ -167,8 +230,8 @@ const EmployeeTable = () => {
                                     <td>{employee.name}</td>
                                     <td>{employee.value}</td>
                                     <td>
-                                        <button onClick={() => handleEdit(index, employee)}>Edit</button>
-                                        <button onClick={() => handleRemove(index, employee.name)}>Remove</button>
+                                        <button onClick={(e) => handleEdit(e, index, employee)}>Edit</button>
+                                        <button onClick={(e) => handleDelete(e, index, employee.name)}>Delete</button>
                                     </td>
                                 </tr>
                             )
