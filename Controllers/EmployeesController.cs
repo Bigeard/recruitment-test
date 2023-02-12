@@ -29,6 +29,7 @@ namespace InterviewTest.Controllers
         [HttpPut]
         public IActionResult Update(string name, [FromBody] Employee employee)
         {
+            if (employee.Name.Length < 1) return new JsonResult(new { statusInfo = "Error you need to have at least one letter" });
             if (!name.Equals(employee.Name))
             {
                 if (GetEmployeeExist(employee))
