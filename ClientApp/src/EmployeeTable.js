@@ -1,20 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-const employees = [
-    { name: "John Doe", value: 100 },
-    { name: "Jane Doe", value: 200 },
-    { name: "Jim Smith", value: 300 },
-    { name: "Joan Watson", value: 400 },
-];
 
-function EmployeeTable() {
-    const [employeeList, setEmployeeList] = useState(employees);
+const EmployeeTable = () => {
+    const [employeeList, setEmployeeList] = useState([]);
     const [name, setName] = useState("");
     const [value, setValue] = useState(0);
 
     const [onEditIndex, setOnEditIndex] = useState(null);
     const [nameEdit, setNameEdit] = useState("");
     const [valueEdit, setValueEdit] = useState(0);
+
+    useEffect(() => {
+        fetch('http://localhost:5000/Employees')
+            .then((response) => response.json())
+            .then((data) => {
+                setEmployeeList(data);
+            })
+    });
 
     // ADD EMPLOYEE
     const handleSubmit = (event) => {
