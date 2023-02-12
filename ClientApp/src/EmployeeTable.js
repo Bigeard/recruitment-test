@@ -10,6 +10,9 @@ const EmployeeTable = () => {
     const [nameEdit, setNameEdit] = useState("");
     const [valueEdit, setValueEdit] = useState(0);
 
+    const [status, setStatus] = useState(null);
+
+    // GET ALL EMPLOYEE
     useEffect(() => {
         fetch('http://localhost:5000/Employees')
             .then((response) => response.json())
@@ -18,35 +21,73 @@ const EmployeeTable = () => {
             })
     });
 
+    const displayStatus = () => {
+        if (status != null) {
+            return (
+                <div>
+                    <span>{status}</span><button onClick={() => setStatus(null)}>X</button>
+                </div>
+            )
+        }
+    }
+
     // ADD EMPLOYEE
     const handleSubmit = (event) => {
         event.preventDefault();
-        setEmployeeList([...employeeList, { name, value }]);
+        fetch('http://localhost:5000/Employees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                Name: name,
+                Value: value
+            }),
+        }).then((response) => response.json())
+            .then((data) => {
+                if (data.status === 400) {
+                    setStatus(`${data.title} - Status ${data.status}`);
+                }
+                else {
+                    setEmployeeList([...employeeList, { name, value }]);
+                }
+            })
+            .catch((error) => setStatus(error.message))
         setName("");
         setValue(0);
     };
 
-    // REMOVE EMPLOYEE
-    const handleRemove = (index) => {
-        setEmployeeList(employeeList.filter((_, i) => i !== index));
-    };
-
-    // EDIT EMPLOYEE
+    // UPDATE EMPLOYEE
     const handleEdit = (index, employee) => {
         setNameEdit(employee.name);
         setValueEdit(employee.value);
         setOnEditIndex(index);
     };
 
-    const handleCancelEdit = (index) => {
+    const handleCancelEdit = () => {
         setOnEditIndex(null);
     };
 
-    const handleSubmitEdit = (index) => {
-        // DO IT
+    const handleSubmitEdit = (index, employeeName) => {
+        fetch('http://localhost:5000/Employees?' + new URLSearchParams({ name: employeeName }), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                Name: nameEdit,
+                Value: valueEdit
+            }),
+        }).then((response) => response.json())
+            .then((data) => {
+                if (data.status === 400) {
+                    setStatus(`${data.title} - Status ${data.status}`);
+                }
+                else {
+                    employeeList[index] = { name, value };
+                }
+            })
+            .catch((error) => setStatus(error.message))
+        setOnEditIndex(null);
     };
 
-    const onEditDisplay = (index) => {
+    const onEditDisplay = (index, employeeName) => {
         return (
             <tr key={index}>
                 <td>
@@ -64,15 +105,36 @@ const EmployeeTable = () => {
                     />
                 </td>
                 <td>
-                    <button onClick={() => handleCancelEdit(index)}>Cancel</button>
-                    <button onClick={() => handleSubmitEdit(index)}>Submit</button>
+                    <button onClick={() => handleCancelEdit()}>Cancel</button>
+                    <button onClick={() => handleSubmitEdit(index, employeeName)}>Submit</button>
                 </td>
             </tr>
         )
     }
 
+    // DELETE EMPLOYEE
+    const handleRemove = (index, employeeName) => {
+        fetch('http://localhost:5000/Employees?' + new URLSearchParams({ name: employeeName }), {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.status === 400) {
+                    setStatus(`${data.title} - Status ${data.status}`);
+                }
+                else {
+                    setEmployeeList(employeeList.filter((_, i) => i !== index));
+                }
+            })
+            .catch((error) => setStatus(error.message))
+    };
+
     return (
         <div>
+            {displayStatus()}
+
+            {/* Add employee form */}
             <form onSubmit={handleSubmit}>
                 <input
                     type="text"
@@ -86,6 +148,8 @@ const EmployeeTable = () => {
                 />
                 <button type="submit">Add Employee</button>
             </form>
+
+            {/* List of employees */}
             <table>
                 <thead>
                     <tr>
@@ -95,23 +159,22 @@ const EmployeeTable = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {employeeList.map((employee, index) => 
-                    (onEditIndex != null && onEditIndex === index) ? 
-                        onEditDisplay(index) : 
-                        (
-                            <tr key={index}>
-                                <td>{employee.name}</td>
-                                <td>{employee.value}</td>
-                                <td>
-                                    <button onClick={() => handleEdit(index, employee)}>Edit</button>
-                                    <button onClick={() => handleRemove(index)}>Remove</button>
-                                </td>
-                            </tr>
-                        )
+                    {employeeList.map((employee, index) =>
+                        (onEditIndex != null && onEditIndex === index) ?
+                            onEditDisplay(index, employee.name) : // edit display for employees with inputs and buttons
+                            (
+                                <tr key={index}>
+                                    <td>{employee.name}</td>
+                                    <td>{employee.value}</td>
+                                    <td>
+                                        <button onClick={() => handleEdit(index, employee)}>Edit</button>
+                                        <button onClick={() => handleRemove(index, employee.name)}>Remove</button>
+                                    </td>
+                                </tr>
+                            )
                     )}
                 </tbody>
             </table>
-
         </div>
     );
 }
