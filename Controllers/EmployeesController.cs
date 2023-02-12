@@ -1,25 +1,14 @@
 ﻿using InterviewTest.Model;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
 using System.Collections.Generic;
 
 namespace InterviewTest.Controllers
 {
-    public class ResultRequest {
-        public int number;
-    }
-
     [ApiController]
     [Route("[controller]")]
     public class EmployeesController : ControllerBase
     {
-        private SqliteConnection CreateConnection()
-        {
-            var connectionStringBuilder = new SqliteConnectionStringBuilder { DataSource = "./SqliteDB.db" };
-            var connection = new SqliteConnection(connectionStringBuilder.ConnectionString);
-            connection.Open();
-            return connection;
-        }
+        // I Action Result
 
         [HttpGet]
         public IActionResult Get()
@@ -30,33 +19,45 @@ namespace InterviewTest.Controllers
         [HttpPost]
         public IActionResult Add([FromBody] Employee employee)
         {
+            if (employee.Name.Length < 1) return new JsonResult(new { statusInfo = "Error you need to have at least one letter" });
+            if (GetEmployeeExist(employee)) return new JsonResult(new { statusInfo = "Error the employee already exists" });
             var number = AddEmployee(employee);
-            if (number < 1) return StatusCode(500); 
-            return new JsonResult(new ResultRequest { number = number });
+            if (number < 1) return StatusCode(500);
+            return new JsonResult(new { number = number });
         }
 
         [HttpPut]
         public IActionResult Update(string name, [FromBody] Employee employee)
         {
+            if (!name.Equals(employee.Name))
+            {
+                if (GetEmployeeExist(employee))
+                {
+                    return new JsonResult(new { statusInfo = "Error the employee already exists" });
+                }
+            }
             var number = UpdateEmployee(name, employee);
-            if (number < 1) return StatusCode(500); 
-            return new JsonResult(new ResultRequest { number = number });
+            if (number < 1) return StatusCode(500);
+            return new JsonResult(new { number = number });
         }
 
         [HttpDelete]
         public IActionResult Delete(string name)
         {
             var number = DeleteEmployee(name);
-            if (number < 1) return StatusCode(500); 
-            return new JsonResult(new ResultRequest { number = number });
+            if (number < 1) return StatusCode(500);
+            return new JsonResult(new { number = number });
         }
 
+
+        // SERVICES
+
         // Get all employees
-        public List<Employee> GetAllEmployees()
+        private List<Employee> GetAllEmployees()
         {
             var employees = new List<Employee>();
 
-            using (var connection = CreateConnection())
+            using (var connection = SqliteDatabase.CreateConnection())
             {
                 connection.Open();
 
@@ -78,10 +79,25 @@ namespace InterviewTest.Controllers
             return employees;
         }
 
-        // Add employee
-        public int AddEmployee(Employee employee)
+        // Get employee
+        private bool GetEmployeeExist(Employee employee)
         {
-            using (var connection = CreateConnection())
+            using (var connection = SqliteDatabase.CreateConnection())
+            {
+                using (var queryCmd = connection.CreateCommand())
+                {
+                    queryCmd.CommandText = @"SELECT 1 FROM Employees WHERE Name = @Name";
+                    queryCmd.Parameters.AddWithValue("@Name", employee.Name);
+                    var reader = queryCmd.ExecuteReader();
+                    return reader.HasRows;
+                }
+            }
+        }
+
+        // Add employee
+        private int AddEmployee(Employee employee)
+        {
+            using (var connection = SqliteDatabase.CreateConnection())
             {
                 using (var queryCmd = connection.CreateCommand())
                 {
@@ -94,9 +110,9 @@ namespace InterviewTest.Controllers
         }
 
         // Update employee
-        public int UpdateEmployee(string name, Employee employee)
+        private int UpdateEmployee(string name, Employee employee)
         {
-            using (var connection = CreateConnection())
+            using (var connection = SqliteDatabase.CreateConnection())
             {
                 using (var queryCmd = connection.CreateCommand())
                 {
@@ -110,9 +126,9 @@ namespace InterviewTest.Controllers
         }
 
         // Delete Employee
-        public int DeleteEmployee(string name)
+        private int DeleteEmployee(string name)
         {
-            using (var connection = CreateConnection())
+            using (var connection = SqliteDatabase.CreateConnection())
             {
                 using (var queryCmd = connection.CreateCommand())
                 {
