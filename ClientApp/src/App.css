@@ -1,0 +1,42 @@
+body {
+    background-color: #282c34;
+    color: white;
+    padding: 40px;
+    font-family: Sans-Serif;
+    text-align: center;
+}
+
+table {
+    margin: auto;
+    width: 100%;
+    max-width: 800px;
+}
+
+thead {
+    background: #000;
+}
+
+th {
+    padding: 10px;
+}
+
+tr:nth-of-type(odd) {
+    background-color: rgba(121, 121, 121, 0.158);
+}
+
+button {
+    display: inline-block;
+    background-color: rgb(13, 158, 255);
+    color: white;
+    border-radius: 7px;
+    border: none;
+    margin: 3px;
+    padding: 8px;
+    text-align: center;
+}
+
+input {
+    border-radius: 7px;
+    border: none;
+    padding: 5px 10px;
+}

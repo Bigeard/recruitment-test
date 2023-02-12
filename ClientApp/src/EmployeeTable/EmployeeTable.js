@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-
+import './EmployeeTable.css';
 
 const EmployeeTable = () => {
     const [init, setInit] = useState(false);
@@ -8,7 +8,7 @@ const EmployeeTable = () => {
     const [name, setName] = useState("");
     const [value, setValue] = useState(0);
 
-    const [onEditIndex, setOnEditIndex] = useState(null);
+    const [onEdit, setOnEdit] = useState(null);
     const [nameEdit, setNameEdit] = useState("");
     const [valueEdit, setValueEdit] = useState(0);
 
@@ -79,18 +79,18 @@ const EmployeeTable = () => {
         event.preventDefault();
         setNameEdit(employee.name);
         setValueEdit(employee.value);
-        setOnEditIndex(index);
+        setOnEdit({index, employee});
     };
 
     const handleCancelEdit = (event) => {
         event.preventDefault();
-        setOnEditIndex(null);
+        setOnEdit(null);
     };
 
-    const handleSubmitEdit = (event, index, employeeName) => {
+    const handleSubmitEdit = (event) => {
         setStatus(null);
         event.preventDefault();
-        fetch('http://localhost:5000/Employees?' + new URLSearchParams({ name: employeeName }), {
+        fetch('http://localhost:5000/Employees?' + new URLSearchParams({ name: onEdit.employee.name }), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -103,17 +103,17 @@ const EmployeeTable = () => {
                     setStatus(data.statusInfo);
                 }
                 else if (data.status === 500) {
-                    setStatus(`${data.title} - Status ${data.status} - PUT /Employees?${new URLSearchParams({ name: employeeName })}`);
+                    setStatus(`${data.title} - Status ${data.status} - PUT /Employees?${new URLSearchParams({ name: onEdit.employee.name })}`);
                 }
                 else {
                     const newEmployeeList = [...employeeList];
-                    newEmployeeList[index] = { name: nameEdit, value: valueEdit };
+                    newEmployeeList[onEdit.index] = { name: nameEdit, value: valueEdit };
                     setEmployeeList(newEmployeeList);
+                    setOnEdit(null);
                 }
             })
             .then(() => getAbcSum())
             .catch((error) => setStatus(error.message));
-        setOnEditIndex(null);
     };
 
     const onEditDisplay = (index, employeeName) => {
@@ -133,9 +133,10 @@ const EmployeeTable = () => {
                         onChange={(e) => setValueEdit(e.target.value)}
                     />
                 </td>
-                <td>
+                <td className="action">
                     <button onClick={(e) => handleCancelEdit(e)}>Cancel</button>
-                    <button onClick={(e) => handleSubmitEdit(e, index, employeeName)}>Submit</button>
+                    <button type="submit">Submit</button> 
+                    {/*  onClick={(e) => handleSubmitEdit(e, index, employeeName)}  */}
                 </td>
             </tr>
         )
@@ -193,51 +194,65 @@ const EmployeeTable = () => {
             {displayStatus()}
 
             <div>
-                <button onClick={handleIncrement}>Increment</button>
+                <button className="button-increment" onClick={handleIncrement}>Increment</button>
                 <span>ABC Sum: {abcSum}</span>
             </div>
 
             {/* Add employee form */}
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                />
-                <input
-                    type="number"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                />
+            <form id="formAddEmployee" onSubmit={handleSubmit}>
+                <div className="form-name form-field">
+                    <label for="name">Name</label>
+                    <input
+                        id="name"
+                        placeholder="Enter the employee's name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    />
+                </div>
+                <div className="form-value form-field">
+                    <label for="value">Value</label>
+                    <input
+                        id="value"
+                        type="number"
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                    />
+                </div>
                 <button type="submit">Add Employee</button>
             </form>
 
-            {/* List of employees */}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Value</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {employeeList.map((employee, index) =>
-                        (onEditIndex != null && onEditIndex === index) ?
-                            onEditDisplay(index, employee.name) : // edit display for employees with inputs and buttons
-                            (
-                                <tr key={index}>
-                                    <td>{employee.name}</td>
-                                    <td>{employee.value}</td>
-                                    <td>
-                                        <button onClick={(e) => handleEdit(e, index, employee)}>Edit</button>
-                                        <button onClick={(e) => handleDelete(e, index, employee.name)}>Delete</button>
-                                    </td>
-                                </tr>
-                            )
-                    )}
-                </tbody>
-            </table>
+            {/* Form edit employee */}
+            <form id="form_edit" onSubmit={handleSubmitEdit}>
+
+                {/* List of employees */}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {employeeList.map((employee, index) =>
+                            (onEdit != null && onEdit.index === index) ?
+                                onEditDisplay(index, employee.name) : // edit display for employees with inputs and buttons
+                                (
+                                    <tr key={index}>
+                                        <td>{employee.name}</td>
+                                        <td>{employee.value}</td>
+                                        <td className="action">
+                                            <button onClick={(e) => handleEdit(e, index, employee)}>Edit</button>
+                                            <button onClick={(e) => handleDelete(e, index, employee.name)}>Delete</button>
+                                        </td>
+                                    </tr>
+                                )
+                        )}
+                    </tbody>
+                </table>
+            </form>
+
         </div>
     );
 }

@@ -1,0 +1,32 @@
+.action {
+    display: flex;
+    justify-content: space-around;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-value {
+    margin-top: 10px;
+}
+
+.button-increment {
+    margin-right: 20px;
+}
+
+#formAddEmployee {
+    margin: 30px auto;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    padding: 20px;
+    background-color: #35383F;
+    border-radius: 20px;
+    width: fit-content;
+}
+
+#formAddEmployee button {
+    margin-top: 20px;
+}
